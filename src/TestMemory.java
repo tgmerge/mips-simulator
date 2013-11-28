@@ -8,21 +8,19 @@ public class TestMemory {
 		Keyboard k = Keyboard.getInstance();
 		Display d = Display.getInstance();
 	
-		// 测试内存
-		m.writeString(Memory.TEXTADDR, "This is some text\0");
+		// 测试内存,测试文本模式显示
+		m.write(Memory.DISPMODE, Memory.TEXTMODE);
+		
+		m.writeString(Memory.TEXTADDR, "This is some text.\0");
 		System.out.println(m.readString(Memory.TEXTADDR));
-		
-		m.write(1000, -1234);
-		System.out.println(m.read(1000));
-		
-		// 测试文本模式显示
-		m.write(Memory.DISPMODE, Memory.TEXTMODE);		
+	
 		m.writeTextMode(10, 6, 'c');
 		
 		// 测试图形模式显示
 		//m.write(Memory.DISPMODE, Memory.GRAPHICMODE);
-		for(int x = 10; x < 100; x ++)
-			m.writeGraphicMode(x, x, 1, 0, 1);
+		for(int xx = 0; xx < 100; xx += 10)
+			for(int x = 10; x < 100; x ++)
+				m.writeGraphicMode(x, x+xx, 1, 0, 1);
 	}
 
 }

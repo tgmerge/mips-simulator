@@ -29,6 +29,8 @@ public class Keyboard implements KeyListener {
 		Memory m = Memory.getInstance();
 		m.write(Memory.KEYBADDR, e.getKeyCode());
 		
+		m.writeTextMode(10, 10, (char)e.getKeyCode());
+		
 		log("[keyPressed]"+e.getKeyCode());
 	}
 

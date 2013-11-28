@@ -7,7 +7,15 @@ MIPS-Simulator
 
 Memory, Display, Keyboard by tgmerge
 
-### 内存
+## 结构
+        
+            [Keyboard]
+               ↑
+    [CPU] ↔ [Memory] ↔ [Disk]
+               ↓
+            [Display]
+
+## 内存
 
 #### class Memory
 
@@ -45,7 +53,7 @@ Memory是单例的。使用时通过```Memory.getInstance()```获取实例。
  * __writeString__(int address, String data):void  
    向指定地址写一个字符串，如果data没有用'\0'结尾，将添加一个
 
-### 显示
+## 显示
 
 #### class Display extends JFrame
 
@@ -70,7 +78,7 @@ Display是一个由定时器控制重绘的JFrame。
  * ___getInstance()___:Display  
    获取唯一的Display对象。如果不存在则会创建一个。
 
-### 键盘
+## 键盘
 
 #### class Keyboard implements KeyListener
 
