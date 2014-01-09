@@ -1,3 +1,8 @@
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.FileInputStream;
+import java.io.IOException;
+
 
 public class Memory {
 	
@@ -52,7 +57,7 @@ public class Memory {
 		int v3 = (readByte(address)   & 0xff);
 		int v  = v0+v1+v2+v3;
 		
-		log("[read]"+address+"=>"+v);
+		log("[read]"+Integer.toHexString(address)+"h=>"+Integer.toHexString(v) + "h");
 		
 		return v;
 	}
@@ -65,7 +70,7 @@ public class Memory {
 	public byte readByte(int address) {
 		
 		if(address < 0 || address >= MEMSIZE) {
-			log("[readByte]Error: invalid memory address: " + address);
+			log("[readByte]Error: invalid memory address: " + Integer.toHexString(address) + "h");
 			return 0;
 		}
 		
@@ -80,7 +85,7 @@ public class Memory {
 	public void write(int address, int value) {
 		
 		if(address < 0 || address > MEMSIZE-4) {
-			log("[write]Error: invalid memory address: " + address);
+			log("[write]Error: invalid memory address: " + Integer.toHexString(address) + "h");
 			return;
 		}
 
@@ -89,7 +94,7 @@ public class Memory {
 		writeByte(address+2, (byte)(value >>> 16));
 		writeByte(address+3, (byte)(value >>> 24));
 		
-		log("[write]"+address+"<="+value);
+		log("[write]"+Integer.toHexString(address)+"h<="+Integer.toHexString(value) + "h");
 	}
 	
 	/**
@@ -100,7 +105,7 @@ public class Memory {
 	public void writeByte(int address, byte value) {
 		
 		if(address < 0 || address >= MEMSIZE) {
-			log("[writeByte]Error: invalid memory address: " + address);
+			log("[writeByte]Error: invalid memory address: " + Integer.toHexString(address) + "h");
 			return;
 		}
 		
@@ -156,8 +161,27 @@ public class Memory {
 		return c;
 	}
 	
-	public void load(String fileName) {
-		// TODO
+	/**
+	 * 从文件载入内存。文件开头的4byte指定了要载入的地址。
+	 * @param fileName
+	 * @throws IOException 
+	 */
+	public void load(String fileName) throws IOException {
+
+		DataInputStream in = new DataInputStream(new FileInputStream(fileName));
+		int addr = in.readInt();
+		int data = 0;
+		
+		try {
+			while (true) {
+				data = in.readInt();
+				write(addr, data);
+				addr += 4;
+			}
+		} catch (EOFException e) {
+			in.close();
+			return;
+		}
 	}
 	
 	/**
@@ -172,7 +196,7 @@ public class Memory {
 			s += (char)readByte(a);
 		}
 		
-		log("[readString]"+address+"=>"+s);
+		log("[readString]"+Integer.toHexString(address)+"h=>"+s);
 		
 		return s;
 	}
@@ -196,9 +220,9 @@ public class Memory {
 			log("[writeString]added 0 at the end.");
 		}
 		
-		log("[writeString]"+address+"<="+data);
+		log("[writeString]"+Integer.toHexString(address)+"h<="+data);
 		
 		return;
 	}
-	
+
 }

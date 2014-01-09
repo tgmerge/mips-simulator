@@ -1,404 +1,545 @@
-import java.io.*;
-public class Cpu{
+/**
+ * 实例化CPU后使用runCpu()启动CPU
+ * @author tgmerge
+ *
+ */
+class Cpu {
 	
-	public final static int  KEYadr = 2;
-    public final static int SYSCALLADDR = 0x100;
-    public final static int ABORTADDR = 0x1000;
-    public final static int WID = 80;
-    public final static int HEI = 15;   
+	static private Cpu instance;			// 单例对象
+	/**
+	 * 单例方法
+	 * @return 唯一的Cpu对象
+	 */
+	static public Cpu getInstance() {
+		if(instance == null) {
+			instance = new Cpu();
+		}
+		return instance;
+	}
 	
-    int REGNUM = 36, REG_HI = 32, REG_LO = 33, CAUSE=34,EPC=35,
-               WIDTH = 80, HEIGHT = 25,
-               END_MEM = 0x10000, // 64Kb
-               KERNEL_MEM = 0, USER_MEM = 0x2000, STATIC_MEM = 0x5000,
-               MAIN_MEM = 0x7000, DISP_MEM = END_MEM - WIDTH*HEIGHT ;
+	/**
+	 * 记录日志用
+	 * @param s 日志信息
+	 */
+	static private void log(String s) {
+		System.out.println("[Cpu]"+s);
+	}
+	
+	/**
+	 * 获取一个32bit数中的某几个bit
+	 * @param value 32bit数据(一般是ir)
+	 * @param start 高位
+	 * @param end	低位
+	 * @return		value[start:end]的值
+	 */
+	static private int getBit(int value, int start, int end) {
+		return value << (31-start) >>> (31-start+end);
+	}
+	
+	/**
+	 * 将signed int解析为unsigned long
+	 * @param signed
+	 * @return unsigned long
+	 */
+	static private long getUnsigned(int signed) {
+		return signed & (-1L >>> 32);
+	}
 
-    boolean  Remark=false;
-    int PC_Remark=0;
-    int PC,IR, MDR;
-    //int endpoint;
-    int Reg[] = new int[REGNUM];
-    //int  CurrSize;
-    //boolean INFflag;
-    byte Memory[] = new byte[END_MEM];
-    //boolean loadedflag;
-    boolean mem_modified_flag;
-    long mem_modified_addr;
+	/** 寄存器,包括PC,EPC **/
+	private RegisterFile regs;
+	/** 是否已经停机 **/
+	private boolean haltFlag;
+	/** 内存对象 **/
+	private Memory memory;
+	/** DEBUG 已经执行的指令条数 **/
+	private int count;
+	
+	/** 初始化 **/
+	public Cpu() {
+		regs     = new RegisterFile();
+		haltFlag = false;
+		count    = 0;
+		
+		//TODO 设置初始运行地址 
+		regs.setReg(regs.PC, 0x1000);
+		
+		// 获取内存对象的实例
+		memory = Memory.getInstance();
 
-    public int getIR(int PC) {
-        int ir;
-        ir = (Memory[PC+0] << 24) |
-             (Memory[PC+1] << 16) |
-             (Memory[PC+2] << 8) |
-             (Memory[PC+3]);
-        return ir;
-    } 
-    public int getPC() {
-    return PC;
-    }
-
-    public int getIC() {
-    return (PC - USER_MEM) / 4;
-    }
-
-    public boolean boot(String fn)
-    {
-       try{
-           File file = new File(fn);
-           if(!file.exists())
-               return false;
-          DataInputStream in = 
-          new DataInputStream(
-          new FileInputStream(
-          new File(fn)));
-          in.read(Memory);
-          in.close();
-       }catch(Exception ex){  }
-       PC=0;
-       return true;
-    }
-
-    public int execute() {
-    int op, rs, rt, rd, dat, udat, adr, shmt, fun;
-    long t;
-    IR = getIR(PC);//IR?
-
-    /*if (PC == endpoint) {
-        return 2;
-    }*/
-
-    boolean mem_modified_flag = false;
-    
-    PC += 4;
-    op = (IR >> 26) & 0x3F;
-    rs = (IR >> 21) & 0x1F;
-    rt = (IR >> 16) & 0x1F;
-    rd = (IR >> 11) & 0x1F;
-    shmt = (IR >> 6) & 0x1F;
-    fun = IR & 0x3F;
-    dat = (short)(IR & 0xFFFF);
-    udat = IR & 0xFFFF;
-    adr = (IR & 0x3FFFFFF) << 2;
-
-    int i,j;
-    if(Remark==true&&(PC-4)==PC_Remark){
-    	//Runtime.getRuntime().exec("cmd /c start cls "); ???????????  	
-    	//system("cls");//??
-           	for(i=0;i<HEI;i++){                   //HEI=15?
-           			for(j=0;j<WID;j++)            //WID=80?
-           				//printf("%c",Memory[DISP_MEM+i*WID+j]);
-           			    //printf("\n");
-           			    System.out.println(Memory[DISP_MEM+i*WID+j]);
-           		}
-           	Remark=false;
-           }
-
-    switch (op) {
-        case 0:
-            switch (fun) {
-                case 12:
-                	 //Reg[31] = PC + 4; //enable delay slot
-                	 Reg[31] = PC; //disable delay slot
-                	 PC_Remark=PC;
-                	 Remark=true;
-                	 PC =SYSCALLADDR;
-                	 break;
-                case 16:    //mfhi
-                    Reg[rd] = Reg[REG_HI];
-                    break;
-
-                case 18:    //mflo
-                    Reg[rd] = Reg[REG_LO];
-                    break;
-
-                case 24:    //mult
-                    t = Reg[rs] * Reg[rt];
-                    Reg[REG_HI] = (int) t >> 32;
-                    Reg[REG_LO] = (int) t & 0xFFFFFFFF;
-                    break;
-
-                case 25:    //multu
-                    t = Reg[rs] * Reg[rt];
-                    Reg[REG_HI] = (int) t >> 32;
-                    Reg[REG_LO] = (int) t & 0xFFFFFFFF;
-                    break;
-
-                case 26:    //div
-                    Reg[REG_HI] = Reg[rs] % Reg[rt];
-                    Reg[REG_LO] = Reg[rs] / Reg[rt];
-                    break;
-
-                case 27:    //divu
-                    Reg[REG_HI] = Reg[rs] % Reg[rt];
-                    Reg[REG_LO] = Reg[rs] / Reg[rt];
-                    break;
-
-                case 32:    //add
-                    Reg[rd] = Reg[rs] + Reg[rt];
-                    break;
-
-                case 33:    //addu
-                    Reg[rd] = Reg[rs] + Reg[rt];
-                    break;
-
-                case 34:    //sub
-                    Reg[rd] = Reg[rs] - Reg[rt];
-                    break;
-
-                case 35:    //subu
-                    Reg[rd] = Reg[rs] - Reg[rt];
-                    break;
-
-                case 36:    //and
-                    Reg[rd] = Reg[rs] & Reg[rt];
-                    break;
-
-                case 37:    //or
-                    Reg[rd] = Reg[rs] | Reg[rt];
-                    break;
-
-                case 38:    //xor
-                    Reg[rd] = Reg[rs] ^ Reg[rt];
-                    break;
-
-                case 39:    //nor
-                    Reg[rd] = ~(Reg[rs] | Reg[rt]);
-                    break;
-
-                case 42:    //slt
-                    Reg[rd] = Reg[rs] < Reg[rt] ? 1 : 0;
-                    break;
-
-                case 43:    //sltu
-                    Reg[rd] = Reg[rs] < Reg[rt] ? 1 : 0;
-                    break;
-
-                case 0:    //sll
-                    Reg[rd] = Reg[rt] << shmt;
-                    break;
-                   
-                case 2:    //srl
-                    Reg[rd] = Reg[rt] >> shmt;
-                    break;
-
-                case 3:    //sra
-                    Reg[rd] = Reg[rt] >> shmt;
-                    System.out.println(shmt);
-                    //cout << shmt;
-                    break;
-
-                case 4:    //sllv
-                    Reg[rd] = Reg[rt] << Reg[rs];
-                    break;
-
-                case 6:    //srlv
-                    Reg[rd] = Reg[rt] >> Reg[rs];
-                    break;
-
-                case 8:    //jr
-                    PC =(int) Reg[rs];
-                    break;
-            }
-            break;
-
-        case 1:
-            switch (rt) {
-                case 0:     //bltz
-                    if (rs < 0)
-                        PC += (dat << 2);
-                    break;
-
-                case 1:     //bgez
-                    if (rs >= 0)
-                        PC += (dat << 2);
-                    break;
-
-                case 16:    //bltzal
-                    if (rs < 0) {
-                        //Reg[31] = PC + 4; //enable delay slot
-                        Reg[31] = PC; //disable delay slot
-                        PC += (dat << 2);
-                    }
-                    break;
-
-                case 17:    //bgezal
-                    if (rs >= 0) {
-                        //Reg[31] = PC + 4; //enable delay slot
-                        Reg[31] = PC; //disable delay slot
-                        PC += (dat << 2);
-                    }
-                    break;
-            }
-            break;
-
-        case 4:     //beq
-            if (Reg[rs] == Reg[rt])
-                PC += (dat << 2);
-            break;
-
-        case 5:     //bne
-            if (Reg[rs] != Reg[rt])
-                PC += (dat << 2);
-            break;
-
-        case 6:     //blez
-            if (Reg[rs] <= 0)
-                PC += (dat << 2);
-            break;
-
-        case 7:     //bgtz
-            if (Reg[rs] > 0)
-                PC += (dat << 2);
-            break;
-
-        case 8:     //addi
-            Reg[rt] = Reg[rs] + dat;
-            break;
-
-        case 9:     //addiu
-            Reg[rt] = Reg[rs] + dat;
-            //System.out.println(dat);
-            break;
-
-        case 10:     //slti
-            Reg[rt] = Reg[rs] < dat ? 1 : 0;
-            //System.out.println(dat);
-            break;
-            
-        case 11:     //sltiu
-            Reg[rt] = Reg[rs] < dat ? 1 : 0;
-            //System.out.println(dat);
-            break;
-            
-        case 12:     //andi
-            Reg[rt] = Reg[rs] & udat;
-            break;
-
-        case 13:     //ori
-            Reg[rt] = Reg[rs] | udat;
-            break;
-
-        case 14:     //xori
-            Reg[rt] = Reg[rs] ^ udat;
-            break;
-
-        case 15:     //lui
-            Reg[rt] = dat << 16;
-            break;
-		case 16:     //mfc0
-		    if(rd==0)
-				Reg[rt]=Reg[CAUSE];
-			else if(rd==1)
-				Reg[rt]=Reg[EPC];
-			break;
-        case 32:    //lb
-            Reg[rt] =Memory[Reg[rs]+dat+0];
-            break;
-
-        case 33:    //lh
-            Reg[rt] = (((Memory[Reg[rs]+dat+0]) << 8) |
-                      Memory[Reg[rs]+dat+1]);
-            break;
-
-        case 35:    //lw
-            /*
-            printf("%X %X %X %X\n",
-                   Memory[Reg[rs]+dat+0], Memory[Reg[rs]+dat+1], Memory[Reg[rs]+dat+2], Memory[Reg[rs]+dat+3]);
-            */
-            Reg[rt] = (Memory[Reg[rs]+dat+0] << 24);
-            Reg[rt] |= (Memory[Reg[rs]+dat+1] << 16);
-            Reg[rt] |= (Memory[Reg[rs]+dat+2] << 8);
-            Reg[rt] |= (Memory[Reg[rs]+dat+3]);
-            break;
-
-        case 36:    //lbu
-            Reg[rt] = Memory[Reg[rs]+dat+0];
-            break;
-
-        case 37:    //lhu
-            Reg[rt] = ((Memory[Reg[rs]+dat+0]) << 8) |
-                      Memory[Reg[rs]+dat+1];
-            break;
-
-        case 40:    //sb
-            Memory[Reg[rs]+dat+0] = (byte)(Reg[rt] & 0xFF);
-            mem_modified_flag = true;
-            mem_modified_addr = Reg[rs] + dat;
-            break;
-
-        case 41:    //sh
-            Memory[Reg[rs]+dat+0] = (byte)((Reg[rt] >> 8) & 0xFF);
-            Memory[Reg[rs]+dat+1] = (byte)(Reg[rt] & 0xFF);
-            mem_modified_flag = true;
-            mem_modified_addr = Reg[rs] + dat;
-            break;
-
-        case 43:    //sw
-            Memory[Reg[rs]+dat+0] = (byte)((Reg[rt] >> 24) & 0xFF);
-            Memory[Reg[rs]+dat+1] = (byte)((Reg[rt] >> 16) & 0xFF);
-            Memory[Reg[rs]+dat+2] = (byte)((Reg[rt] >> 8) & 0xFF);
-            Memory[Reg[rs]+dat+3] = (byte)(Reg[rt] & 0xFF);
-            mem_modified_flag = true;
-            mem_modified_addr = Reg[rs] + dat;
-            break;
-
-        case 2:     //j
-            PC = adr;
-            break;
-
-        case 3:     //jal
-            //Reg[31] = PC + 4; //enable delay slot
-            Reg[31] = PC; //disable delay slot
-            PC = adr;
-            break;
-        
-        default:
-            System.out.println("Instrution Error!");
-            return 1;
-            //break;            
-    }
-    return 0;
-}
+		log("CPU initialized");
+	}
+	
+	/**
+	 * 输出所有寄存器值到System.out
+	 */
+	public void debugRegs() {
+		for(int i = 0; i < 32; i ++) {
+			log("R[" + i + "]=" + regs.getReg(i));
+		}
+		log("R[PC]= " + regs.getReg(regs.PC));
+		log("R[IR]= " + regs.getReg(regs.IR));
+		log("R[EPC]=" + regs.getReg(regs.EPC));
+		log("R[HI]= " + regs.getReg(regs.HI));
+		log("R[LO]= " + regs.getReg(regs.LO));
+	}
+	
+	/** 启动CPU **/
+	public void runCpu() {
+		runCpu(0);
+	}
+	
+	/**
+	 * 启动CPU并运行指定数量的指令后终止
+	 * @param maxCount 指令数量。为0时将持续运行。
+	 */
+	public void runCpu(int maxCount) {
+		log("CPU started");
+		
+		// 时钟循环
+		try {
+			while (haltFlag == false) {
+				count ++;
+				log("=====Instruction " + count + " =====");
+				phaseFetch();
+				phaseDecode();
+				phaseInterrupt();
+				if(maxCount != 0 && count >= maxCount) {
+					break;
+				}
+			}
+		} catch (Exception e) {
+			log("[CPU ERROR]");
+			e.printStackTrace();
+		}
+		
+		debugRegs();
+		log("CPU halted");
+	}
+	
+	
+	/** P1 取址 **/
+	private void phaseFetch() {
+		log("P1 fetch");
+		
+		// IR = mem[PC]
+		int pc = regs.getReg(regs.PC);
+		int ir = memory.read(pc);
+		regs.setReg(regs.IR, ir);
+		
+		log("  PC=" + Integer.toHexString(pc));
+		log("  IR=" + Integer.toHexString(ir));
+		
+		// PC = PC + 4
+		regs.setReg(regs.PC, pc+4);
+	}
+	
+	/** 译码中临时使用的变量 **/
+	private int ss, tt, ii, dd, hh;
+	
+	private void phaseDecode() throws Exception {
+		log("P2 decode and execute");
+		
+		// IR
+		int ir = regs.getReg(regs.IR);
+		
+		// 译码，op = ir[31:26]
+		int op    = getBit(ir, 31, 26);
+		int aluop = 0;
+		log("  OP=" + Integer.toBinaryString(op) + "b");
+		
+		// 默认进行最多数情况的译码(s, t, i)
+		ss = getBit(ir, 25, 21);
+		tt = getBit(ir, 20, 16);
+		ii = getBit(ir, 15, 0);
+		
+		// NOOP被解释为SLL $zero, $zero, 0。
+		switch (op) {
+			
+			case 0x00:
+				// get aluop = ir[5:0]
+				aluop = getBit(ir, 5, 0);
+				ss    = getBit(ir, 25, 21);
+				tt    = getBit(ir, 20, 16);
+				dd    = getBit(ir, 15, 11);
+				hh    = getBit(ir, 10, 6);				
+				switch (aluop) {
+					case 0x20: ADD();     break;
+					case 0x21: ADDU();    break;
+					case 0x24: AND();     break;
+					case 0x1A: DIV();     break;
+					case 0x1B: DIVU();    break;
+					case 0x08: JR();      break;
+					case 0x10: MFHI();    break;
+					case 0x12: MFLO();    break;
+					case 0x18: MULT();    break;
+					case 0x19: MULTU();   break; 
+					case 0x25: OR();      break;
+					case 0x00: SLL();     break;
+					case 0x04: SLLV();    break;
+					case 0x2A: SLT();     break;
+					case 0x2B: SLTU();    break;
+					case 0x03: SRA();     break;
+					case 0x02: SRL();     break;
+					case 0x06: SRLV();    break;
+					case 0x22: SUB();     break;
+					case 0x23: SUBU();    break;
+					case 0x0C: SYSCALL(); break;
+					case 0x26: XOR();     break;
+					default:
+						throw new Exception("[Cpu ERROR] unknown aluop: " + aluop);
+				}
+				break;
+				
+			case 0x01:
+				// get aluop = ir[20:16]
+				aluop = getBit(ir, 20, 16);
+				ss    = getBit(ir, 25, 21);
+				ii    = getBit(ir, 15, 0);				
+				switch (aluop) {
+					case 0x01: BGEZ();   break;
+					case 0x11: BGEZAL(); break;
+					case 0x00: BLTZ();   break;
+					case 0x10: BLTZAL(); break;
+					default:
+						throw new Exception("[Cpu ERROR] unknown aluop: " + aluop);
+				}
+				break;
+				
+			case 0x02: ii = getBit(ir, 25, 0); J(); break;
+			case 0x03: ii = getBit(ir, 25, 0); JAL(); break;
+			case 0x04: BEQ();   break;
+			case 0x05: BNE();   break;
+			case 0x06: BLEZ();  break;
+			case 0x07: BGTZ();  break;
+			case 0x08: ADDI();  break;
+			case 0x09: ADDIU(); break;
+			case 0x0A: SLTI();  break;
+			case 0x0B: SLTIU(); break;
+			case 0x0C: ANDI();  break;
+			case 0x0D: ORI();   break;
+			case 0x0E: XORI();  break;
+			case 0x0F: LUI();   break;
+			case 0x20: LB();    break;
+			case 0x23: LW();    break;
+			case 0x28: SB();    break;
+			case 0x2B: SW();    break;
+			default:
+				log("  ERR invalid opcode=" + Integer.toBinaryString(op) + "b");
+		}
+		
+		log("  ^ aluop=" + Integer.toBinaryString(aluop) + "b");
+		log("  ^ s=" + ss + " t=" + tt + " d=" + dd + " h=" + hh + " i=" + ii);
+	}
+	
+	private void phaseInterrupt() {
+		log("P3 interrupt");
+	}
+	
+	
+	// 以下、各种计算
+	
+	
+	private void SW() {
+		log(" > LB");
+		memory.write(regs.getReg(ss)+ii, regs.getReg(tt));
+	}
 
 
-/*protected void syscall(){
-        if(Reg[2] == 10){
-            //10鍙蜂腑鏂紝绋嬪簭缁撴潫
-            System.out.println("syscall 2 ");
-            parent.running = false;
-            parent.cString = "";
-        }
-        else if(Reg[2] == 1){
-            //1鍙蜂腑鏂紝鏄剧ずint锛岃鏄剧ず鐨勬暟鍦╝0
-            System.out.println("syscall 1 ");
-            String intString = (new Integer(Reg[4])).toString();
-            printString(intString);
-        }
-        else if(Reg[2] == 4){
-            //4鍙蜂腑鏂紝鏄剧ず瀛楃涓诧紝瑕佹樉绀虹殑瀛楃涓查鍦板潃鍦╝0
-            System.out.println("syscall 4 ");
-            String s = "";
-            int i = Reg[4];
-            while(this.Memory[i] != '@'){
-                s += (char)this.Memory[i];
-                i++;
-            }
-            printString(s);
-        }
-        else if(Reg[2] == 5){
-            //5鍙蜂腑鏂紝杈撳叆涓�釜瀛楃
-            //int now = parent.num;
-            System.out.println("syscall 5 ");
-            if(parent.cString.length()<1)  parent.cpuwait=true;
-            else{
-                char c = parent.cString.charAt(parent.cString.length()-1);
-                Reg[2] = Integer.valueOf(c)-48;
-                //PC-=4;
-                parent.cString=parent.cString.substring(0,parent.cString.length()-1);
-                parent.cpuwait=false;
-            }
-            
-        }*/
+	private void SB() {
+		log(" > SB");
+		memory.writeByte(regs.getReg(ss)+ii, (byte) (regs.getReg(tt)&0xFF));
+	}
 
 
+	private void LW() {
+		log(" > LW");
+		regs.setReg(tt, memory.read(regs.getReg(ss)+ii));
+	}
+
+
+	private void LB() {
+		log(" > LB");
+		regs.setReg(tt, memory.readByte(regs.getReg(ss)+ii));
+	}
+
+
+	private void LUI() {
+		log("  > LUI");
+		regs.setReg(tt, ii << 16);
+	}
+
+
+	private void XORI() {
+		log("  > XORI");
+		regs.setReg(dd, regs.getReg(ss) ^ ii);
+	}
+
+
+	private void ORI() {
+		log("  > ORI");
+		regs.setReg(dd, regs.getReg(ss) | ii);
+	}
+
+
+	private void ANDI() {
+		log("  > ANDI");
+		regs.setReg(dd, regs.getReg(ss) & ii);
+	}
+
+
+	private void SLTIU() {
+		log("  > SLTIU");
+		if (getUnsigned(regs.getReg(ss)) < getUnsigned(ii)) {
+			regs.setReg(dd, 1);
+		} else {
+			regs.setReg(dd, 0);
+		}
+	}
+
+
+	private void SLTI() {
+		log("  > SLTI");
+		if (regs.getReg(ss) < ii) {
+			regs.setReg(dd, 1);
+		} else {
+			regs.setReg(dd, 0);
+		}
+	}
+
+
+	private void ADDIU() {
+		log("  > ADDIU");
+		regs.setReg(tt, regs.getReg(ss) + ii);
+	}
+
+
+	private void ADDI() {
+		log("  > ADDI");
+		regs.setReg(tt, regs.getReg(ss) + ii);
+	}
+
+
+	private void BGTZ() {
+		log("  > BGTZ");
+		if (regs.getReg(ss) > 0) {
+			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+		}
+	}
+
+
+	private void BLEZ() {
+		log("  > BLEZ");
+		if (regs.getReg(ss) <= 0) {
+			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+		}
+	}
+
+
+	private void BNE() {
+		log("  > BEQ");
+		if (regs.getReg(ss) != regs.getReg(tt)) {
+			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+		}
+	}
+
+
+	private void BEQ() {
+		log("  > BEQ");
+		if (regs.getReg(ss) == regs.getReg(tt)) {
+			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+		}
+	}
+
+
+	private void JAL() {
+		log("  > JAL");
+		regs.setReg(31, regs.getReg(regs.PC) + 4);
+		regs.setReg(regs.PC, (regs.getReg(regs.PC) & 0x0F0000000) | (ii << 2));
+	}
+
+
+	private void J() {
+		log("  > J");
+		regs.setReg(regs.PC, (regs.getReg(regs.PC) & 0x0F0000000) | (ii << 2));
+	}
+
+
+	private void BLTZAL() {
+		log("  > BLTZAL");
+		if (regs.getReg(ss) < 0) {
+			regs.setReg(31, regs.getReg(regs.PC) + 4);
+			regs.setReg(regs.PC, regs.getReg(regs.PC)+ (ii << 2));
+		}
+	}
+
+
+	private void BLTZ() {
+		log("  > BLTZ");
+		if (regs.getReg(ss) < 0) {
+			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+		}
+	}
+
+
+	private void BGEZAL() {
+		log("  > BGEZAL");
+		if (regs.getReg(ss) >= 0) {
+			regs.setReg(31, regs.getReg(regs.PC) + 4);
+			regs.setReg(regs.PC, regs.getReg(regs.PC)+ (ii << 2));
+		}
+	}
+
+
+	private void BGEZ() {
+		log("  > BGEZ");
+		if (regs.getReg(ss) >= 0) {
+			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+		}
+	}
+
+
+	private void XOR() {
+		log("  > XOR");
+		regs.setReg(dd,  regs.getReg(ss) ^ regs.getReg(tt));
+	}
+
+
+	private void SYSCALL() {
+		// TODO syscall
+	}
+
+
+	private void SUBU() {
+		log("  > SUB");
+		regs.setReg(dd, (int) ((getUnsigned(regs.getReg(ss)) - getUnsigned(regs.getReg(tt))) & 0x0FFFFFFFF) );
+	}
+
+
+	private void SUB() {
+		log("  > SUB");
+		regs.setReg(dd, regs.getReg(ss) - regs.getReg(tt));
+	}
+
+
+	private void SRLV() {
+		log("  > SRLV");
+		regs.setReg(dd, regs.getReg(tt) >>> regs.getReg(hh));
+	}
+
+
+	private void SRL() {
+		log("  > SRL");
+		regs.setReg(dd, regs.getReg(tt) >>> hh);
+	}
+
+
+	private void SRA() {
+		log("  > SRA");
+		regs.setReg(dd, regs.getReg(tt) >> hh);
+	}
+
+
+	private void SLTU() {
+		log("  > SLTU");
+		if ( getUnsigned(regs.getReg(ss)) < getUnsigned(regs.getReg(tt)) ) {
+			regs.setReg(dd, 1);
+		} else {
+			regs.setReg(dd, 0);
+		}
+	}
+
+
+	private void SLT() {
+		log("  > SLT");
+		if (regs.getReg(ss) < regs.getReg(tt)) {
+			regs.setReg(dd, 1);
+		} else {
+			regs.setReg(dd, 0);
+		}
+	}
+
+
+	private void SLLV() {
+		log("  > SLLV");
+		regs.setReg(dd, regs.getReg(tt) << regs.getReg(ss));
+	}
+
+
+	private void SLL() {
+		log("  > SLL");
+		regs.setReg(dd, regs.getReg(tt) << hh);
+	}
+
+
+	private void OR() {
+		log("  > OR");
+		regs.setReg(dd, regs.getReg(ss) | regs.getReg(tt));
+	}
+
+
+	private void MULTU() {
+		log("  > MULT");
+		regs.setReg(regs.LO, regs.getReg(ss) * regs.getReg(tt));
+	}
+
+
+	private void MULT() {
+		log("  > MULT");
+		regs.setReg(regs.LO, regs.getReg(ss) * regs.getReg(tt));
+		// TODO 添加溢出trap
+	}
+
+
+	private void MFLO() {
+		log("  > MFLO");
+		regs.setReg(dd, regs.getReg(regs.LO));
+	}
+
+
+	private void MFHI() {
+		log("  > MFHI");
+		regs.setReg(dd, regs.getReg(regs.HI));
+	}
+
+
+	private void JR() {
+		log("  > JR");
+		regs.setReg(regs.PC, regs.getReg(ss));
+	}
+
+
+	private void DIVU() {
+		log("  > DIV");
+		regs.setReg(regs.LO, regs.getReg(ss) / regs.getReg(tt));
+		regs.setReg(regs.HI, regs.getReg(ss) % regs.getReg(tt));
+	}
+
+
+	private void DIV() {
+		log("  > DIV");
+		regs.setReg(regs.LO, regs.getReg(ss) / regs.getReg(tt));
+		regs.setReg(regs.HI, regs.getReg(ss) % regs.getReg(tt));
+		// TODO 添加溢出trap，情况和ADD,ADDU类似
+	}
+
+
+	private void AND() {
+		log("  > AND");
+		regs.setReg(dd, regs.getReg(ss) & regs.getReg(tt));
+	}
+
+
+	private void ADDU() {
+		log("  > ADDU");
+		regs.setReg(dd, regs.getReg(ss) + regs.getReg(tt));
+	}
+
+
+	private void ADD() {
+		log("  > ADD");
+		regs.setReg(dd, regs.getReg(ss) + regs.getReg(tt));
+		// TODO 添加溢出trap
+		// ADD和ADDU结果总是相同的。只有溢出的情况不同。
+	}
+	
 }
