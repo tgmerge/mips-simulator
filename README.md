@@ -21,15 +21,15 @@ Memory, Display, Keyboard by tgmerge
 
 Memory是单例的。使用时通过```Memory.getInstance()```获取实例。
 
-| 常量			| 意义					|
-|---------------|-----------------------|
-| MEMSIZE		| 内存大小				|
-| DISPMODE		| 显示模式的内存地址		|
-| TEXTMODE		| 显示模式的“文本模式”值	|
-| GRAPHICMODE	| 显示模式的“图形模式”值	|
-| DISPADDR		| 图形模式显存基地址		|
-| TEXTADDR		| 文本模式显存基地址		|
-| KEYBADDR		| 键盘输入地址			|
+| 常量			| 意义					| 初始值	   |
+|---------------|-----------------------|----------|
+| MEMSIZE		| 内存大小				| 0x400000 |
+| DISPMODE		| 显示模式的内存地址		| 0x1FFFFC |
+| TEXTMODE		| 显示模式的“文本模式”值	|        0 |
+| GRAPHICMODE	| 显示模式的“图形模式”值	|        1 |
+| DISPADDR		| 图形模式显存基地址		| 0x200000 |
+| TEXTADDR		| 文本模式显存基地址		| 0x380000 |
+| KEYBADDR		| 键盘输入地址			| 0x390000 |
 
 公共方法：
 

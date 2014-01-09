@@ -161,7 +161,7 @@ public class Memory {
 	}
 	
 	/**
-	 * 从address开始的内存地址开始读一个字符串，不含结尾的\0。。
+	 * 从address开始的内存地址开始读一个字符串，不含结尾的\0
 	 * @param address 起始地址
 	 * @return 读出的字符串。
 	 */
@@ -178,7 +178,7 @@ public class Memory {
 	}
 	
 	/**
-	 * 向address写入一个字符串，如果串末尾不是\0，将在最后写入一个\0.
+	 * 向address写入一个字符串，如果串末尾不是\0，将在最后写入一个\0
 	 * @param address 地址
 	 * @param data    要写的字符串
 	 */

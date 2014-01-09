@@ -1,4 +1,4 @@
-public class TestMemory {
+public class Test {
 
 	@SuppressWarnings("unused")
 	public static void main(String[] args) {
@@ -7,7 +7,11 @@ public class TestMemory {
 		Memory m = Memory.getInstance();
 		Keyboard k = Keyboard.getInstance();
 		Display d = Display.getInstance();
-	
+		
+		Cpu c = new Cpu();
+		
+		System.out.println("=w=");
+	/*
 		// 测试内存,测试文本模式显示
 		m.write(Memory.DISPMODE, Memory.TEXTMODE);
 		
@@ -18,9 +22,10 @@ public class TestMemory {
 		
 		// 测试图形模式显示
 		//m.write(Memory.DISPMODE, Memory.GRAPHICMODE);
-		for(int xx = 0; xx < 100; xx += 10)
+		for(int t = 0; t < 100; t += 10)
 			for(int x = 10; x < 100; x ++)
-				m.writeGraphicMode(x, x+xx, 1, 0, 1);
+				m.writeGraphicMode(x, x+t, 1, 0, 1);
+		*/
 	}
 
 }
