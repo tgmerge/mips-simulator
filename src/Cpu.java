@@ -1,7 +1,6 @@
 /**
- * 实例化CPU后使用runCpu()启动CPU
+ * 实例化CPU后使用runCpu()启动CPU，方法见README
  * @author tgmerge
- *
  */
 class Cpu {
 	
@@ -405,7 +404,34 @@ class Cpu {
 
 
 	private void SYSCALL() {
-		// TODO syscall
+		log("  > SYSCALL");
+		
+		// $v0 = $2, $a0 = $4;
+		int callNo = regs.getReg(2);
+		int param  = regs.getReg(4);
+		
+		// ...
+		switch(callNo) {
+		case 1:  // print integer	$a0 = integer to print
+			break;
+		case 4:  // print string		$a0 = address of null-terminated string to print
+			break;
+		case 5:  // read integer		$v0 contains integer read
+			break;
+		case 10: //	exit
+			break;
+		case 11: // print character  $a0 = character to print
+			break;
+		case 12: //	read character  12  $v0 contains character read
+			break;
+		case 13: //	open file       13  $a0 = address of null-terminated string containing filename， $a1 = flags， $a2 = mode, => $v0 contains file descriptor (negative if error).
+			break;
+		case 14: //	read from file  14  $a0 = file descriptor, $a1 = address of input buffer, $a2 = maximum number of characters to read, => $v0 contains number of characters read (0 if end-of-file, negative if error).
+			break;
+		case 15: //	write to file   15  $a0 = file descriptor, $a1 = address of output buffer, $a2 = number of characters to write => $v0 contains number of characters written (negative if error).
+			break;
+		case 16: //	close file      16  $a0 = file descriptor
+		}
 	}
 
 

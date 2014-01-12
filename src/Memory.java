@@ -3,7 +3,11 @@ import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-
+/**
+ * 内存，方法见README
+ * @author tgmerge
+ *
+ */
 public class Memory {
 	
 	static private Memory instance;			// 单例对象
