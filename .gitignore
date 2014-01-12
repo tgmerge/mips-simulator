@@ -11,7 +11,6 @@ tmp/
 *.swp
 *~.nib
 local.properties
-.classpath
 .loadpath
 
 # External tool builders
