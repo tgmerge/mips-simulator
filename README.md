@@ -89,8 +89,8 @@ Memory是单例的。使用时通过```Memory.getInstance()```获取实例。
  * __getKeyboardKey__():char  
 	读取键盘按键值。若键盘正在按下某键，返回其ASCII码，再次调用将返回0。如果没有键被按下，直接返回0。  
 	如果不使用该方法，直接读KEYBADDR处的值也是可以的。
- * TODO __load__(String fileName):void  
-	从文件载入内存，尚未实现
+ * __load__(String fileName):void  
+	从文件载入内存。载入到的地址是文件的头4byte决定的。
  * __readString__(int address):String  
 	从指定地址读出一个字符串(每位8bit)，以'\0'结尾
  * __writeString__(int address, String data):void  
