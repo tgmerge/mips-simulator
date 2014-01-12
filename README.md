@@ -5,7 +5,8 @@ MIPS-Simulator
 
 2013秋冬《汇编与接口》课程作业的某部分
 
-Memory, Display, Keyboard by tgmerge
+Memory, Display, Keyboard, Cpu by tgmerge
+其他不是我写的 \'_>'
 
 ## 结构
 		  
