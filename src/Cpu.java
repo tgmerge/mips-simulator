@@ -322,7 +322,7 @@ class Cpu {
 	private void BGTZ() {
 		log("  > BGTZ");
 		if (regs.getReg(ss) > 0) {
-			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+			regs.setReg(regs.PC, regs.getReg(regs.PC) + (ii << 2));
 		}
 	}
 
@@ -330,15 +330,15 @@ class Cpu {
 	private void BLEZ() {
 		log("  > BLEZ");
 		if (regs.getReg(ss) <= 0) {
-			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+			regs.setReg(regs.PC, regs.getReg(regs.PC) + (ii << 2));
 		}
 	}
 
 
 	private void BNE() {
-		log("  > BEQ");
+		log("  > BNE");
 		if (regs.getReg(ss) != regs.getReg(tt)) {
-			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+			regs.setReg(regs.PC, regs.getReg(regs.PC) + (ii << 2));
 		}
 	}
 
@@ -346,7 +346,7 @@ class Cpu {
 	private void BEQ() {
 		log("  > BEQ");
 		if (regs.getReg(ss) == regs.getReg(tt)) {
-			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+			regs.setReg(regs.PC, regs.getReg(regs.PC) + (ii << 2));
 		}
 	}
 
@@ -376,7 +376,7 @@ class Cpu {
 	private void BLTZ() {
 		log("  > BLTZ");
 		if (regs.getReg(ss) < 0) {
-			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+			regs.setReg(regs.PC, regs.getReg(regs.PC) + (ii << 2));
 		}
 	}
 
@@ -393,7 +393,7 @@ class Cpu {
 	private void BGEZ() {
 		log("  > BGEZ");
 		if (regs.getReg(ss) >= 0) {
-			regs.setReg(regs.PC, regs.getReg(ss) + (ii << 2));
+			regs.setReg(regs.PC, regs.getReg(regs.PC) + (ii << 2));
 		}
 	}
 

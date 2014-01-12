@@ -14,7 +14,8 @@ public class Test {
 		Display  d = Display.getInstance();
 		Cpu      c = Cpu.getInstance();
 		
-		c.runCpu();
+		c.runCpu(10);
+		c.debugRegs();
 		
 	/*
 		// 测试内存,测试文本模式显示
