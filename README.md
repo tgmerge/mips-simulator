@@ -41,6 +41,8 @@ Cpu.runCpu()可使CPU持续运行，Cpu.runCpu(int maxCount)将使CPU执行maxCo
 	
 ## CPU
 
+#### class Cpu
+
 CPU是单例的。使用时通过```Cpu.getInstance()```获取实例即可。
 
 CPU开始运行于内存地址0x1000处。
@@ -69,10 +71,8 @@ Memory是单例的。使用时通过```Memory.getInstance()```获取实例。
 | DISPADDR		| 图形模式显存基地址		| 0x200000 |
 | TEXTADDR		| 文本模式显存基地址		| 0x380000 |
 | KEYBADDR		| 键盘输入地址			| 0x390000 |
-
 | 常量        | 意义              | 初始值    |
 |---------------|-----------------------|----------|
-| 
 
 公共方法：
 
